@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Image Editor</title>
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+        <style>
+            :root {
+                --add-primary: #7c3aed;  /* Purple for add */
+                --add-secondary: #6d28d9;
+                --remove-primary: #dc2626;  /* Red for remove */
+                --remove-secondary: #b91c1c;
+                --glass: rgba(255, 255, 255, 0.1);
+            }
+    
+            body {
+                min-height: 100vh;
+                background: linear-gradient(135deg, #0f172a, #1e293b);
+                color: white;
+                padding: 2rem;
+                font-family: 'Poppins', sans-serif;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+    
+            .editor-header {
+                text-align: center;
+                margin-bottom: 2rem;
+                width: 100%;
+                max-width: 800px;
+            }
+    
+            .editor-header h1 {
+                font-size: 2.2rem;
+                margin-bottom: 0.5rem;
+                background: linear-gradient(45deg, #fff, #cbd5e1);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                margin: 2rem 0;
+                display: flex;
+                justify-content: center;
+            }
+    
+            .container {
+                position: relative;
+                display: inline-block;
+                border-radius: 20px;
+                overflow: hidden;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                background: var(--glass);
+                backdrop-filter: blur(10px);
+            }
+    
+            #target-image {
+                display: block;
+                max-width: 800px;
+                height: auto;
+                border-radius: 15px;
+            }
+    
+            .annotation {
+                position: absolute;
+                color: white;
+                font-weight: 600;
+                padding: 8px 16px;
+                border-radius: 8px;
+                transform: translate(-50%, -50%);
+                animation: float 3s ease-in-out infinite;
+                cursor: pointer;
+            }
+    
+            .annotation.add {
+                background: linear-gradient(45deg, var(--add-primary), var(--add-secondary));
+                box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+            }
+    
+            .annotation.remove {
+                background: linear-gradient(45deg, var(--remove-primary), var(--remove-secondary));
+                box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+            }
+    
+            .annotation.add::after {
+                border-top-color: var(--add-primary);
+            }
+    
+            .annotation.remove::after {
+                border-top-color: var(--remove-primary);
+            }
+    
+            .annotation::after {
+                content: '';
+                position: absolute;
+                bottom: -8px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 0;
+                height: 0;
+                border-left: 8px solid transparent;
+                border-right: 8px solid transparent;
+                border-top: 8px solid;
+            }
+    
+            .annotation-close {
+                pointer-events: auto;
+                display: none;
+                position: absolute;
+                right: -8px;
+                top: -8px;
+                background: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                text-align: center;
+                line-height: 20px;
+                color: #dc2626;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                border: 1px solid #dc2626;
+                z-index: 1001;
+            }
+    
+            @keyframes float {
+                0%, 100% { transform: translate(-50%, -55%) }
+                50% { transform: translate(-50%, -45%) }
+            }
+    
+            .tooltip {
+                position: fixed;
+                bottom: 2rem;
+                left: 50%;
+                transform: translateX(-50%);
+                background: var(--glass);
+                padding: 12px 24px;
+                border-radius: 50px;
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                text-align: center;
+                width: fit-content;
+            }
+    
+            .context-menu {
+                position: fixed;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 8px;
+                padding: 5px 0;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                display: none;
+                flex-direction: column;
+                z-index: 1000;
+                min-width: 120px;
+            }
+    
+            .context-button {
+                background: none;
+                border: none;
+                padding: 8px 16px;
+                cursor: pointer;
+                color: #1e293b;
+                font-family: 'Poppins', sans-serif;
+                font-size: 14px;
+                transition: all 0.2s;
+                text-align: left;
+            }
+    
+            .context-button:hover {
+                background: #f1f5f9;
+            }
+    
+            .context-button.remove {
+                color: #dc2626;
+            }
+    
+            @media (max-width: 768px) {
+                body {
+                    padding: 1rem;
+                }
+                #target-image {
+                    max-width: 100%;
+                }
+            }
+
+            .clear-button {
+        position: fixed;
+        bottom: 6rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #dc2626;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 50px;
+        border: none;
+        cursor: pointer;
+        font-family: 'Poppins', sans-serif;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(220, 38, 38, 0.3);
+    }
+
+    .clear-button:hover {
+        background: #b91c1c;
+        transform: translateX(-50%) scale(1.05);
+    }
+
+        </style>
+    </head>
+    <body>
+    <div class="editor-header">
+        <h1>Annotation Studio</h1>
+        <p>Click anywhere on the image to add annotations</p>
+    </div>
+
+    <div class="container">
+        <img id="target-image" src="{{ url_for('static', filename='uploads/' + filename) }}" 
+             data-orig-width="{{ width }}" data-orig-height="{{ height }}">
+        <div id="annotations-container"></div>
+    </div>
+
+    <div class="tooltip">
+        ✨ Click anywhere on the image to add annotations
+    </div>
+
+    <button class="clear-button" id="clear-all">Clear All Annotations</button>
+
+
+    <!-- Context menu moved BEFORE the script tag -->
+    <div class="context-menu">
+        <button class="context-button add">Add Object</button>
+        <button class="context-button remove">Remove Object</button>
+    </div>
+
+    <script>
+        const img = document.getElementById('target-image');
+        const container = document.querySelector('.container');
+        const annotationsContainer = document.getElementById('annotations-container');
+        const contextMenu = document.querySelector('.context-menu');
+        let currentClickPosition = { x: 0, y: 0 };
+
+        function getScalingFactors() {
+            const origWidth = parseInt(img.dataset.origWidth);
+            const origHeight = parseInt(img.dataset.origHeight);
+            const displayedWidth = img.clientWidth;
+            const displayedHeight = img.clientHeight;
+            return {
+                scaleX: origWidth / displayedWidth,
+                scaleY: origHeight / displayedHeight
+            };
+        }
+
+        img.addEventListener('click', function(e) {
+            e.stopPropagation();
+            contextMenu.style.display = 'flex';
+            contextMenu.style.left = `${e.clientX}px`;
+            contextMenu.style.top = `${e.clientY}px`;
+            currentClickPosition = { 
+                x: e.clientX, 
+                y: e.clientY 
+            };
+        });
+
+        document.addEventListener('click', function(e) {
+            contextMenu.style.display = 'none';
+        });
+
+        document.querySelectorAll('.context-button').forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
+                contextMenu.style.display = 'none';
+                
+                const action = this.classList.contains('remove') ? 'remove' : 'add';
+                const rect = img.getBoundingClientRect();
+                const scales = getScalingFactors();
+                
+                // Convert click position to image coordinates
+                const x = (currentClickPosition.x - rect.left) * scales.scaleX;
+                const y = (currentClickPosition.y - rect.top) * scales.scaleY;
+                
+                const text = prompt(`Enter object to ${action}:`);
+                if (text) {
+                    fetch('/add_text', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            filename: "{{ filename }}",
+                            x: Math.round(x),
+                            y: Math.round(y),
+                            text: text,
+                            action: action
+                        })
+                    }).then(() => loadAnnotations());
+                }
+            });
+        });
+
+        document.getElementById('clear-all').addEventListener('click', function() {
+    if (confirm('Are you sure you want to remove all annotations?')) {
+        fetch('/clear_annotations', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                filename: "{{ filename }}"
+            })
+        }).then(() => loadAnnotations());
+    }
+});
+
+
+        function loadAnnotations() {
+            annotationsContainer.innerHTML = '';
+            const scales = getScalingFactors();
+            
+            fetch('/get_annotations/{{ filename }}')
+                .then(response => response.json())
+                .then(data => {
+                    data.texts.forEach(annotation => {
+                        const elem = document.createElement('div');
+                        // Add action-based class here
+                        elem.className = `annotation ${annotation.action}`;
+                        elem.style.left = `${annotation.x / scales.scaleX}px`;
+                        elem.style.top = `${annotation.y / scales.scaleY}px`;
+                        elem.textContent = annotation.text;
+                    
+                    // Store metadata
+                    elem.dataset.text = annotation.text;
+                    elem.dataset.gridX = annotation.grid_position[0];
+                    elem.dataset.gridY = annotation.grid_position[1];
+
+                    // Create close button
+                    const closeBtn = document.createElement('div');
+                    closeBtn.className = 'annotation-close';
+                    closeBtn.innerHTML = '×';
+                    
+                    // Add click handler for close button
+                    closeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const text = elem.dataset.text;
+                        const gridX = elem.dataset.gridX;
+                        const gridY = elem.dataset.gridY;
+                        
+                        if (confirm(`Remove ${text} at (${gridX},${gridY})?`)) {
+                            fetch('/remove_text', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    filename: "{{ filename }}",
+                                    text: text,
+                                    grid_position: [parseInt(gridX), parseInt(gridY)]
+                                })
+                            }).then(() => loadAnnotations());
+                        }
+                    });
+
+                    // Add hover/click handlers
+                    elem.addEventListener('mouseenter', () => closeBtn.style.display = 'block');
+                    elem.addEventListener('mouseleave', () => {
+                        if (!elem.classList.contains('selected')) {
+                            closeBtn.style.display = 'none';
+                        }
+                    });
+                    
+                    elem.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        document.querySelectorAll('.annotation').forEach(a => {
+                            a.classList.remove('selected');
+                            a.querySelector('.annotation-close').style.display = 'none';
+                        });
+                        elem.classList.add('selected');
+                        closeBtn.style.display = 'block';
+                    });
+
+                    elem.appendChild(closeBtn);
+                    annotationsContainer.appendChild(elem);
+                });
+            });
+    }
+
+    // Add click handler to deselect annotations
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.annotation')) {
+            document.querySelectorAll('.annotation').forEach(a => {
+                a.classList.remove('selected');
+                a.querySelector('.annotation-close').style.display = 'none';
+            });
+        }
+    });
+
+
+        // Initial load
+        img.onload = loadAnnotations;
+        window.addEventListener('resize', loadAnnotations);
+    </script>
+</body>
+</html>
